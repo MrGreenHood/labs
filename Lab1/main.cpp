@@ -31,6 +31,9 @@ void addition(struct Matrix* m1, struct Matrix* m2, Matrix *res);//Сложение двух
 void scalar_multiplication(struct Matrix* m1, float scalar, Matrix *res);//умножение матрицы на скаляр
 void transpose(struct Matrix* m1, Matrix *res);//Транспонирование матрицы
 void lines_addition(struct Matrix* m1, int num_i, int num_p, float kof, Matrix *res );//Прибавление строки к другой строки
+void map(void(*func)(void *, void *, int), struct Matrix* m1, void*deg);
+void add(void*a, void*b, int el_size);
+void mlt(void*a, void*b, int el_size);
 
 
 
@@ -51,7 +54,9 @@ int main()
     setlocale(LC_CTYPE,"rus");
     int pref=0;
     int size;
-    int el_size;
+    int el_size_1;
+    int el_size_2;
+    int el_size_3;
     float scalar;
     int num_i, num_p;
     float koef;
@@ -59,20 +64,23 @@ int main()
     int flag_ans=1;
     int flag_ans_r=1;
     int flag_size=1;
+    int ans=0;
 
 
     while(flag_rep)
     {
         flag_rep=0;
-        printf("Что вы хотите сделать?\nумножить две матрицы- 1\nсложить две матрицы-2\nумножить на скаляр-3\nтранспонировать-4\nприбавить к строке линейную комбинацию других строк-5\n");
+        printf("Что вы хотите сделать?\nумножить две матрицы- 1\nсложить две матрицы-2\nумножить на скаляр-3\nтранспонировать-4\nприбавить к строке линейную комбинацию других строк-5\nфункция map-6\n");
         scanf("%d",&pref);
         printf("Введите порядок матрицы nxn: ");
         scanf("%d",&size);
         while(flag_size)
         {
-            printf("Введите размер элемента(int-4,float-32): ");
-            scanf("%d",&el_size);
-            if(el_size!=4&&el_size!=32)
+            printf("Введите размер элемента для первой матрицы(int-4,float-32): ");
+            scanf("%d",&el_size_1);
+            printf("Введите размер элемента для второй матрицы(int-4,float-32): ");
+            scanf("%d",&el_size_2);
+            if((el_size_1!=4&&el_size_1!=32)&&(el_size_2!=4&&el_size_2!=32))
             {
                 printf("Введен неправильный размер");
                 flag_size=1;
@@ -81,15 +89,17 @@ int main()
                 flag_size=0;
         }
 
-        mat1=create(el_size,size);
+        mat1=create(el_size_1,size);
+        el_size_1<=el_size_2 ? el_size_3=el_size_2 : el_size_3=el_size_1;
 
 
         switch (pref) {
         case 1:
-            res = create(mat1->element_size, mat1->size);
+
+            res = create(el_size_3, mat1->size);
             printf("Введите элементы первой матрицы по одному\n");
             fill_mat(mat1);
-            mat2=create(el_size,size);
+            mat2=create(el_size_2,size);
             printf("Введите элементы второй матрицы по одному\n");
             fill_mat(mat2);
             multiplication(mat1,mat2,res);
@@ -97,10 +107,10 @@ int main()
             free(mat2);
             break;
         case 2:
-            res = create(mat1->element_size, mat1->size);
+            res = create(el_size_3, mat1->size);
             printf("Введите элементы первой матрицы по одному\n");
             fill_mat(mat1);
-            mat2=create_ed(el_size,size);
+            mat2=create_ed(el_size_2,size);
             printf("Введите элементы второй матрицы по одному\n");
             fill_mat(mat2);
             addition(mat1,mat2,res);
@@ -108,7 +118,7 @@ int main()
             free(mat2);
             break;
         case 3:
-            res = create(mat1->element_size, mat1->size);
+            res = create(el_size_3, mat1->size);
             printf("Введите элементы матрицы по одному\n");
             fill_mat(mat1);
             printf("Введите скаляр\n");
@@ -117,7 +127,7 @@ int main()
             free(res);
             break;
         case 4:
-            res = create(mat1->element_size, mat1->size);
+            res = create(el_size_3, mat1->size);
             printf("Введите элементы матрицы по одному\n");
             fill_mat(mat1);
             transpose(mat1,res);
@@ -172,11 +182,29 @@ int main()
 
             break;
         case 6:
-            test_mlt();
+            printf("Введите элементы первой матрицы по одному\n");
+            fill_mat(mat1);
+            printf("Что вы хотите сделать(прибавить число-1, умножить на число-2): ");
+            scanf("%d",&ans);
+            printf("Введите число: ");
+            scanf("%f",&scalar);
+            if(ans==1)
+                map(add,mat1,&scalar);
+            else if(ans==2)
+                map(mlt,mat1,&scalar);
+            else
+            {
+                printf("Выбран несуществующий пункт");
+                flag_rep=1;
+            }
 
+            break;
+        case 7:
+            test_mlt();
+            break;
 
         default:
-            printf("Выбран несуществующий пункт");
+            printf("Выбран несуществующий пункт\n");
             flag_rep=1;
             break;
         }
@@ -282,22 +310,54 @@ void print_mat(struct Matrix* m1)
 void multiplication(struct Matrix* m1, struct Matrix* m2,struct Matrix *res)
 {
 
-    if (m1->element_size==4)
-    {
+    int type=m1->element_size+m2->element_size;
+
+    switch (type) {
+    case 8:
+        for(int j=0;j<m1->size;j++)
+        {
+            for(int l=0;l<m1->size;l++)
+            {
+                int el=0;
+                for(int i=0; i<m1->size;i++)
+                    el+=*((int*)m1->matrix +j*m1->size+i)*(*((int*)m2->matrix +i*m2->size+l));
+                *((int*)res->matrix+j*m1->size+l)=el;
+
+            }
+        }
+        break;
+    case 36:
+        if (m1->element_size==4)
+        {
+                for(int j=0;j<m1->size;j++)
+                {
+                    for(int l=0;l<m1->size;l++)
+                    {
+                        int el=0;
+                        for(int i=0; i<m1->size;i++)
+                            el+=*((int*)m1->matrix +j*m1->size+i)*(*((float*)m2->matrix +i*m2->size+l));
+                        *((float*)res->matrix+j*m1->size+l)=el;
+
+                    }
+                }
+         }
+        else
+        {
             for(int j=0;j<m1->size;j++)
             {
                 for(int l=0;l<m1->size;l++)
                 {
-                    int el=0;
+                    float el=0;
                     for(int i=0; i<m1->size;i++)
-                        el+=*((int*)m1->matrix +j*m1->size+i)*(*((int*)m2->matrix +i*m2->size+l));
-                    *((int*)res->matrix+j*m1->size+l)=el;
+                        el+=*((float*)m1->matrix +j*m1->size+i)*(*((int*)m2->matrix +i*m2->size+l));
+                    *((float*)res->matrix+j*m1->size+l)=el;
 
                 }
+
             }
-     }
-    else
-    {
+        }
+        break;
+    case 64:
         for(int j=0;j<m1->size;j++)
         {
             for(int l=0;l<m1->size;l++)
@@ -310,6 +370,10 @@ void multiplication(struct Matrix* m1, struct Matrix* m2,struct Matrix *res)
             }
 
         }
+    break;
+
+    default:
+        break;
     }
     print_mat(res);
 
@@ -318,18 +382,35 @@ void multiplication(struct Matrix* m1, struct Matrix* m2,struct Matrix *res)
 void addition(struct Matrix* m1, struct Matrix* m2,struct Matrix *res)
 {
 
-     if (m1->element_size==4)
-     {
-         for(int k=0;k<res->size*res->size;k++)
-             *((int*)res->matrix+k)=*((int*)m1->matrix+k)+(*((int*)m2->matrix+k));
-     }
-     else
-     {
-         for(int k=0;k<res->size*res->size;k++)
-             *((float*)res->matrix+k)=*((float*)m1->matrix+k)+(*((float*)m2->matrix+k));
-     }
+    int type=m1->element_size+m2->element_size;
 
-     print_mat(res);
+    switch (type) {
+    case 8:
+        for(int k=0;k<res->size*res->size;k++)
+            *((int*)res->matrix+k)=*((int*)m1->matrix+k)+(*((int*)m2->matrix+k));
+        break;
+    case 36:
+        if (m1->element_size==4)
+        {
+            for(int k=0;k<res->size*res->size;k++)
+                *((int*)res->matrix+k)=*((int*)m1->matrix+k)+(*((float*)m2->matrix+k));
+         }
+        else
+        {
+            for(int k=0;k<res->size*res->size;k++)
+                *((float*)res->matrix+k)=*((int*)m1->matrix+k)+(*((int*)m2->matrix+k));
+        }
+        break;
+    case 64:
+        for(int k=0;k<res->size*res->size;k++)
+            *((float*)res->matrix+k)=*((float*)m1->matrix+k)+(*((float*)m2->matrix+k));
+    break;
+
+    default:
+        break;
+    }
+
+    print_mat(res);
 
 }
 
@@ -519,14 +600,56 @@ void test_mlt(void)
     free(m1);
     free(m2);
     free(res);
+}
 
+void map(void (*func)(void*,void*,int el_size),struct Matrix* m1, void* deg)
+{
+    if(m1->element_size==4)
+    {
 
+        for(int i=0; i<m1->size*m1->size;i++)
+        {
+            func(((int*)m1->matrix+i),deg,m1->element_size);
+        }
+    }
+    if(m1->element_size==32)
+    {
+        for(int i=0; i<m1->size*m1->size;i++)
+        {
+            func(((float*)m1->matrix+i),deg,m1->element_size);
+        }
+    }
 
-
+    print_mat(m1);
 
 
 
 }
 
+void add(void *a, void *b,int el_size)
+{
+    if(el_size==4)
+    {
+        *((int*)a)+=((int)*((float*)b));
+    }
+    if(el_size==32)
+    {
+        *((float*)a)+=(*((float*)b));
+    }
 
+}
+
+
+void mlt(void*a,void*b,int el_size)
+{
+    if(el_size==4)
+    {
+        *((int*)a)=(int)(((float)*((int*)a))*(*((float*)b)));
+
+    }
+    if(el_size==32)
+    {
+        *((float*)a)*=(*((float*)b));
+    }
+}
 
